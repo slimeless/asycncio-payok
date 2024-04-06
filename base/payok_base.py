@@ -3,30 +3,36 @@ from aiohttp import ClientSession
 from enum import Enum as enum
 from payok_enums import Method, Ty
 import functools
-import logging
+from logging import info, debug, error
 import time
 
 
-class APIRequestLogger:
-	def __init__(selff, logger=None, log_level=logging.INFO):
-		selff.logger = logger or logging.getLogger(__name__)
-		selff.log_level = log_level
+class BaseAPIRequestLogger:
 
-	def __call__(selff, func):
+	def start_method(self, args, kwargs):
+		info(f"Called {self.STATIC_URL} (with args={args} and kwargs={kwargs})")
+
+	def end_method(self, result, end_time, start_time):
+		info(f"Result of {self.STATIC_URL} = {result}, took {end_time - start_time:.6f} seconds")
+
+	def error_method(self, e, args, kwargs):
+		error(f"skill issue {self.STATIC_URL} (args: {args}, kwargs: {kwargs}): {str(e)}")
+
+	@classmethod
+	def __call__(cls, func):
 		@functools.wraps(func)
 		async def wrapper(self, *args, **kwargs):
 			if self.logging_enabled:
 				start_time = time.time()
-				selff.logger.log(selff.log_level, f"Вызов {func.__name__} с аргументами={args} и kwargs={kwargs}")
+				cls.start_method(self, args, kwargs)
 				try:
 					result = await func(self, *args, **kwargs)
 				except Exception as e:
 					end_time = time.time()
-					selff.logger.error(f"Ошибка в {func.__name__}: {str(e)}, заняло {end_time - start_time:.6f} секунд")
+					cls.error_method(self, e, args, kwargs)
 					raise e
 				end_time = time.time()
-				selff.logger.log(selff.log_level,
-				                 f"{func.__name__} вернул {result}, заняло {end_time - start_time:.6f} секунд")
+				cls.end_method(self, result, end_time, start_time)
 				return result
 			else:
 				return await func(self, *args, **kwargs)
@@ -56,7 +62,7 @@ class BaseSession:
 		if response.get('status') == 'error':
 			raise Exception(response.get('error_text'))
 		return response
-
+	@BaseAPIRequestLogger()
 	async def _send_req(self, method: enum, url: enum, **kwargs) -> dict:
 		"""
         An asynchronous function to send a request using the specified method, URL, and additional keyword arguments.
