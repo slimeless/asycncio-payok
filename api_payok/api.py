@@ -12,8 +12,10 @@ class PayOk(BaseSession):
 			api_key: str,
 			secret_key: Optional[str] = None,
 			shop: Optional[int] = None,
+			logging_enabled=False
 	) -> None:
 		super().__init__()
+		self.logging_enabled = logging_enabled
 		self.__api_id = api_id
 		self.__api_key = api_key
 		self.__secret_key = secret_key
