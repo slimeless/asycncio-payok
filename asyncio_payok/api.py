@@ -4,9 +4,10 @@ from asyncio_payok.const import *
 from urllib.parse import urlencode
 from urllib.parse import quote
 from hashlib import md5
+from metrics import TimeMeasuringMeta
 
 
-class PayOk(BaseSession):
+class PayOk(BaseSession, metaclass=TimeMeasuringMeta):
 	def __init__(
 			self,
 			api_id: int,
@@ -20,7 +21,14 @@ class PayOk(BaseSession):
 		self.__secret_key = secret_key
 		self.__shop = shop
 
-	async def get_balance(self):
+	async def get_balance(self) -> Balance:
+		"""
+		get_balance function retrieves the balance for the user.
+
+		Parameters:None
+
+		Returns:
+			Balance: An object representing the user's balance."""
 		method = Method.POST
 		data = {
 			'API_ID': self.__api_id,
@@ -31,6 +39,13 @@ class PayOk(BaseSession):
 
 	async def get_transactions(self, payment_id: Optional[int] = None, offset: Optional[int] = None) -> Union[
 		Transaction, list[Transaction]]:
+		"""
+		Async function to retrieve transactions based on payment ID and offset.
+
+		:param payment_id: Optional[int] - The payment ID to filter transactions by.
+		:param offset: Optional[int] - The offset for paginating through transactions.
+		:return: Union[Transaction, list[Transaction]] - A single transaction or a list of transactions.
+		"""
 		method = Method.POST
 		data = {
 			'API_ID': self.__api_id,
@@ -46,7 +61,8 @@ class PayOk(BaseSession):
 		transactions = [Transaction(**x) for x in res if isinstance(x, dict)]
 		return transactions[0] if len(transactions) == 1 else transactions
 
-	async def __sign(self, params: list) -> str:
+	@staticmethod
+	async def __sign(params: list) -> str:
 		sign = '|'.join(map(str, params)).encode('utf-8')
 		return md5(sign).hexdigest()
 
@@ -60,9 +76,25 @@ class PayOk(BaseSession):
 			success_url: Optional[str] = None,
 			method: Optional[str] = None,
 			lang: Optional[str] = None,
-			custom: Optional[str] = None,
-			zip_url: bool = False
+			custom: Optional[str] = None
 	) -> str:
+		"""
+		Generate the payment URL for a given amount, payment method, and other optional parameters.
+
+		Parameters:
+		    amount (float): The amount of the payment.
+		    payment (Union[int, str]): The payment method.
+		    currency (Optional[str]): The currency for the payment (default is RUB).
+		    desc (Optional[str]): Description of the payment (default is 'Description').
+		    email (Optional[str]): Email associated with the payment.
+		    success_url (Optional[str]): URL to redirect to after successful payment.
+		    method (Optional[str]): Payment method.
+		    lang (Optional[str]): Language for the payment.
+		    custom (Optional[str]): Custom parameter for the payment.
+
+		Returns:
+		    str: The payment URL.
+		"""
 		url = self.STATIC_URL + Ty.PAY.value + '?'
 		if self.__secret_key:
 			data = {
@@ -84,13 +116,18 @@ class PayOk(BaseSession):
 		else:
 			raise Exception('Secret key is required')
 
-		if zip_url:
-			return quote(url + urlencode(data), safe='')
 		return url + urlencode(data)
 
-	async def get_payout(self,
-	                     payout: Optional[int] = None,
-	                     offset: Optional[int] = None):
+	async def get_payout(
+			self,
+	        payout: Optional[int] = None,
+	        offset: Optional[int] = None) -> Union[Payout, list[Payout]]:
+		"""
+		A description of the entire function, its parameters, and its return types.
+		    :param payout: Optional[int] = None
+		    :param offset: Optional[int] = None
+		    :return: Union[Payout, list[Payout]]
+		"""
 		method = Method.POST
 		data = {
 			'API_ID': self.__api_id,
@@ -113,6 +150,17 @@ class PayOk(BaseSession):
 			webhook_url: Optional[str] = None,
 			method: str = 'card',
 	) -> CreatedPayout:
+		"""
+		Asynchronously creates a payout with the given amount, receiver, and optional parameters.
+
+		:param amount: The amount to be paid out.
+		:param receiver: The recipient of the payout.
+		:param sbp_bank: The SBP bank for the payout (optional).
+		:param commission_type: The type of commission for the payout (default is 'balance').
+		:param webhook_url: The URL for webhook notifications (optional).
+		:param method: The method of payout (default is 'card').
+		:return: An instance of CreatedPayout representing the created payout.
+		"""
 
 		method_http = Method.POST
 		data = {
