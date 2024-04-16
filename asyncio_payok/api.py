@@ -4,10 +4,9 @@ from asyncio_payok.const import *
 from urllib.parse import urlencode
 from urllib.parse import quote
 from hashlib import md5
-from metrics import TimeMeasuringMeta
 
 
-class PayOk(BaseSession, metaclass=TimeMeasuringMeta):
+class PayOk(BaseSession):
 	def __init__(
 			self,
 			api_id: int,

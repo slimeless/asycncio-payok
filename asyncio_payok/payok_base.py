@@ -3,7 +3,6 @@ from aiohttp import ClientSession
 from enum import Enum as enum
 from asyncio_payok.const import Ty, Method
 import functools
-from logging import info, debug, error
 import time
 from typing import Optional
 
